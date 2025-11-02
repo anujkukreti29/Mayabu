@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { FiChevronLeft, FiChevronRight } from "react-icons/fi";
 
@@ -20,49 +20,120 @@ const slides = [
 
 const BannerSlider = () => {
   const [current, setCurrent] = useState(0);
+  const [direction, setDirection] = useState(0); // 1 for next, -1 for prev
   const intervalTime = 5000;
+  const timerRef = useRef(null);
+  const touchStart = useRef(null);
+  const touchEnd = useRef(null);
 
-  const nextSlide = useCallback(() => {
+  // Auto slide function wrapped for reset usage
+  const autoSlide = useCallback(() => {
+    setDirection(1);
     setCurrent((prev) => (prev === slides.length - 1 ? 0 : prev + 1));
   }, []);
 
-  const prevSlide = () => {
+  // Clear and reset the auto slide timer
+  const resetTimer = useCallback(() => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    timerRef.current = setInterval(autoSlide, intervalTime);
+  }, [autoSlide]);
+
+  // Next slide with timer reset
+  const nextSlide = useCallback(() => {
+    setDirection(1);
+    setCurrent((prev) => (prev === slides.length - 1 ? 0 : prev + 1));
+    resetTimer();
+  }, [resetTimer]);
+
+  // Previous slide with timer reset
+  const prevSlide = useCallback(() => {
+    setDirection(-1);
     setCurrent((prev) => (prev === 0 ? slides.length - 1 : prev - 1));
+    resetTimer();
+  }, [resetTimer]);
+
+  // Initialize auto slide timer on mount
+  useEffect(() => {
+    timerRef.current = setInterval(autoSlide, intervalTime);
+
+    return () => clearInterval(timerRef.current);
+  }, [autoSlide]);
+
+  // Touch handlers for swipe on mobile
+  const handleTouchStart = (e) => {
+    touchStart.current = e.targetTouches[0].clientX;
   };
 
-  useEffect(() => {
-    const timer = setInterval(nextSlide, intervalTime);
-    return () => clearInterval(timer);
-  }, [nextSlide]);
+  const handleTouchMove = (e) => {
+    touchEnd.current = e.targetTouches[0].clientX;
+  };
+
+  const handleTouchEnd = () => {
+    if (touchStart.current === null || touchEnd.current === null) return;
+    const distance = touchStart.current - touchEnd.current;
+    if (Math.abs(distance) > 40) {
+      if (distance > 0) nextSlide();
+      else prevSlide();
+    }
+    touchStart.current = null;
+    touchEnd.current = null;
+  };
+
+  // Animation variants for sliding
+  const variants = {
+    enter: (direction) => ({
+      x: direction > 0 ? "100%" : "-100%",
+      zIndex: 0,
+    }),
+    center: {
+      x: 0,
+      zIndex: 1,
+    },
+    exit: (direction) => ({
+      x: direction > 0 ? "-100%" : "100%",
+      zIndex: 0,
+    }),
+  };
 
   return (
     <div className="relative w-full flex justify-center bg-[#F1F2F4] py-5">
       <div
         className="group relative w-[97%] sm:w-[95%] mx-auto overflow-hidden 
-        rounded-3xl shadow-[0_8px_25px_rgba(0,0,0,0.15)] 
-        hover:shadow-[0_12px_35px_rgba(0,0,0,0.25)] 
-        transition-all duration-500 bg-gradient-to-b from-gray-100 to-gray-50"
+               rounded-3xl shadow-[0_8px_25px_rgba(0,0,0,0.15)] 
+               hover:shadow-[0_12px_35px_rgba(0,0,0,0.25)] 
+               transition-all duration-500 bg-gradient-to-b from-gray-100 to-gray-50"
       >
-        {/* Slide Container */}
-        <div className="relative h-[180px] sm:h-[240px] md:h-[300px] lg:h-[340px] xl:h-[360px] overflow-hidden rounded-3xl">
-          <AnimatePresence mode="wait">
+        {/* Slider */}
+        <div
+          className="relative h-[140px] sm:h-[200px] md:h-[260px] lg:h-[300px] xl:h-[320px] overflow-hidden rounded-3xl"
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+        >
+          <AnimatePresence mode="sync" custom={direction}>
             <motion.div
               key={slides[current].id}
-              initial={{ opacity: 0, scale: 1.03 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 1.03 }}
-              transition={{ duration: 0.8, ease: "easeInOut" }}
+              custom={direction}
+              variants={variants}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              transition={{
+                x: { type: "spring", stiffness: 60, damping: 15 },
+                duration: 1.8,
+              }}
               className="absolute inset-0 rounded-3xl"
               style={{
                 backgroundImage: `url(${slides[current].image})`,
                 backgroundPosition: "center",
-                backgroundSize: "cover", // ensures full fit without empty space
+                backgroundSize: "cover",
                 backgroundRepeat: "no-repeat",
               }}
+              aria-label={slides[current].alt}
             />
           </AnimatePresence>
 
-          {/* Soft overlay for smoother look */}
+          {/* Gradient Overlay */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent rounded-3xl pointer-events-none" />
 
           {/* Navigation Arrows */}
@@ -80,7 +151,6 @@ const BannerSlider = () => {
             >
               <FiChevronLeft size={26} />
             </motion.button>
-
             <motion.button
               whileHover={{
                 scale: 1.15,

@@ -41,129 +41,132 @@ const categories = [
 ];
 
 const ARROW_BUTTON_SIZE = 36;
-const ARROW_GAP = 12;
 
-const CategoriesBar = ({ onCategorySelect, selectedCategory = categories[0].name }) => {
+const CategoriesBar = ({ onCategorySelect }) => {
+  const [selectedCategory, setSelectedCategory] = useState(null);
   const containerRef = useRef(null);
-  const [maxScrollLeft, setMaxScrollLeft] = useState(0);
-  const [containerWidth, setContainerWidth] = useState(0);
-  const [isScrollable, setIsScrollable] = useState(false);
 
-  useEffect(() => {
-    function updateMeasurements() {
-      if (containerRef.current) {
-        const clientWidth = containerRef.current.clientWidth;
-        const scrollableWidth = containerRef.current.scrollWidth;
-        setContainerWidth(clientWidth);
-        setMaxScrollLeft(scrollableWidth - clientWidth);
-        setIsScrollable(scrollableWidth > clientWidth);
-      }
-    }
-    updateMeasurements();
-    window.addEventListener("resize", updateMeasurements);
-    return () => window.removeEventListener("resize", updateMeasurements);
-  }, [categories.length]);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
 
-  const scroll = (direction) => {
-    if (containerRef.current) {
-      const scrollAmount = containerRef.current.offsetWidth / 2;
-      let newScrollPosition =
-        containerRef.current.scrollLeft +
-        (direction === "left" ? -scrollAmount : scrollAmount);
-      newScrollPosition = Math.max(0, Math.min(newScrollPosition, maxScrollLeft));
-      containerRef.current.scrollTo({ left: newScrollPosition, behavior: "smooth" });
-    }
+  // Scroll event handler to enable/disable arrows
+  const updateScrollState = () => {
+    if (!containerRef.current) return;
+    const { scrollLeft, scrollWidth, clientWidth } = containerRef.current;
+    setCanScrollLeft(scrollLeft > 4);
+    setCanScrollRight(scrollLeft + clientWidth < scrollWidth - 4);
   };
 
-  const maxIconsWidth = containerWidth - 2 * (ARROW_BUTTON_SIZE + ARROW_GAP);
+  useEffect(() => {
+    updateScrollState();
+    const container = containerRef.current;
+    if (!container) return;
+    container.addEventListener("scroll", updateScrollState);
+    window.addEventListener("resize", updateScrollState);
+    return () => {
+      container.removeEventListener("scroll", updateScrollState);
+      window.removeEventListener("resize", updateScrollState);
+    };
+  }, []);
+
+  const scroll = (direction) => {
+    if (!containerRef.current) return;
+    const scrollAmount = containerRef.current.offsetWidth * 0.7;
+    containerRef.current.scrollBy({
+      left: direction === "left" ? -scrollAmount : scrollAmount,
+      behavior: "smooth",
+    });
+  };
 
   return (
-    <div
-      className="relative flex items-center w-[97%] sm:w-[95%] mx-auto mt-1 py-2 rounded-2xl shadow bg-gradient-to-r from-blue-50 via-white to-blue-50 border border-gray-100"
-      style={{ minHeight: 56 }}
-    >
+    <div className="relative flex items-center w-[97%] sm:w-[95%] mx-auto mt-2 py-2 rounded-2xl bg-gradient-to-r from-blue-50 via-white to-blue-50 border border-gray-100 shadow-sm select-none overflow-hidden">
       {/* Left Arrow */}
       <button
         onClick={() => scroll("left")}
         aria-label="Scroll left"
-        className="flex items-center justify-center rounded-full bg-white/70 shadow-sm transition-transform hover:scale-105 hover:bg-blue-50 focus:outline-none active:outline-none border-none absolute top-1/2 -translate-y-1/2 z-20"
+        className={`absolute left-2 flex items-center justify-center rounded-full 
+          bg-white/80 shadow-sm transition-all duration-300
+          ${canScrollLeft ? "opacity-100" : "opacity-50 pointer-events-none"}`}
         style={{
           width: ARROW_BUTTON_SIZE,
           height: ARROW_BUTTON_SIZE,
-          left: ARROW_GAP,
-          padding: "6px",
+          zIndex: 5,
         }}
+        tabIndex={-1}
       >
         <FiChevronLeft size={20} />
       </button>
 
-      {/* Categories Container */}
+      {/* Category Icons */}
       <div
         ref={containerRef}
-        className="flex gap-6 sm:gap-9 overflow-x-auto scroll-smooth no-scrollbar items-center"
+        className="flex gap-4 sm:gap-7 md:gap-8 overflow-x-auto scroll-smooth no-scrollbar items-center px-10"
         style={{
-          maxWidth: maxIconsWidth > 0 ? maxIconsWidth : "100%",
-          paddingLeft: ARROW_GAP,
-          paddingRight: ARROW_GAP,
-          minHeight: "56px",
-          justifyContent: isScrollable ? "flex-start" : "center",
-          marginLeft: "auto",
-          marginRight: "auto",
+          scrollSnapType: "x mandatory",
+          minHeight: 56,
+          width: "100%",
         }}
       >
         {categories.map((cat) => (
           <motion.button
             key={cat.id}
-            whileTap={{ scale: 0.96 }}
+            whileTap={{ scale: 0.97 }}
             whileHover={{ scale: 1.06 }}
-            onClick={() => onCategorySelect && onCategorySelect(cat.name)}
-            className={`group flex flex-col items-center min-w-[60px] sm:min-w-[72px] select-none transition-all ${
-              selectedCategory === cat.name
-                ? "font-bold text-blue-700"
-                : "text-gray-700 group-hover:text-blue-600"
-            }`}
+            onClick={() => {
+              setSelectedCategory(cat.name);
+              onCategorySelect && onCategorySelect(cat.name);
+            }}
+            className={`group flex flex-col items-center min-w-[56px] sm:min-w-[64px] md:min-w-[72px] transition-colors select-none focus:outline-none
+              ${
+                selectedCategory === cat.name
+                  ? "font-semibold text-blue-700"
+                  : "text-gray-700 group-hover:text-blue-600"
+              }`}
             tabIndex={-1}
+            title={cat.name}
             style={{
               background: "none",
               border: "none",
               outline: "none",
             }}
-            title={cat.name}
           >
             <div
-              className={`flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 mb-1 rounded-xl border border-gray-200 shadow-sm
+              className={`flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 mb-1 rounded-xl border border-gray-200 shadow-sm transition-all duration-200
                 ${
                   selectedCategory === cat.name
                     ? "bg-gradient-to-br from-blue-100 to-blue-50 text-blue-700"
                     : "bg-white group-hover:bg-blue-50"
                 }
               `}
+              style={{
+                scrollSnapAlign: "center",
+              }}
             >
               {cat.icon}
             </div>
-            <span className="text-[10px] sm:text-xs font-semibold text-center truncate max-w-[70px]">
+            <span className="text-[10px] sm:text-xs font-medium text-center truncate max-w-[70px]">
               {cat.name}
             </span>
           </motion.button>
         ))}
       </div>
-
+      
       {/* Right Arrow */}
       <button
         onClick={() => scroll("right")}
         aria-label="Scroll right"
-        className="flex items-center justify-center rounded-full bg-white/70 shadow-sm transition-transform hover:scale-105 hover:bg-blue-50 focus:outline-none active:outline-none border-none absolute top-1/2 -translate-y-1/2 z-20"
+        className={`absolute right-2 flex items-center justify-center rounded-full 
+          bg-white/80 shadow-sm transition-all duration-300
+          ${canScrollRight ? "opacity-100" : "opacity-50 pointer-events-none"}`}
         style={{
           width: ARROW_BUTTON_SIZE,
           height: ARROW_BUTTON_SIZE,
-          right: ARROW_GAP,
-          padding: "6px",
+          zIndex: 5,
         }}
+        tabIndex={-1}
       >
         <FiChevronRight size={20} />
       </button>
-
-      {/* Hide scrollbar CSS */}
       <style jsx>{`
         .no-scrollbar::-webkit-scrollbar {
           display: none;

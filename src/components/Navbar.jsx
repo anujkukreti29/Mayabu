@@ -4,16 +4,8 @@ import Tippy from "@tippyjs/react";
 import "tippy.js/dist/tippy.css";
 import "tippy.js/animations/scale.css";
 import {
-  FiHeart,
-  FiBell,
-  FiUser,
-  FiSearch,
-  FiMenu,
-  FiX,
-  FiHome,
-  FiGrid,
-  FiDollarSign,
-  FiSettings,
+  FiHeart, FiBell, FiUser, FiSearch, FiMenu, FiX, FiHome,
+  FiGrid, FiDollarSign, FiSettings,
 } from "react-icons/fi";
 import logo from "../assets/images/logo.png";
 
@@ -30,12 +22,6 @@ const mobileMenuLinks = [
 
 const COMMON_FOCUS = "focus:outline-none focus:ring-0 focus:border-none";
 
-// ---------- Helpers ----------
-const handleSearchSubmit = (query) => {
-  if (query.trim()) alert(`Searching for: ${query}`);
-};
-
-// ---------- Subcomponents ----------
 const DesktopSearch = memo(({ query, setQuery, onSubmit }) => (
   <form
     onSubmit={onSubmit}
@@ -61,25 +47,6 @@ const DesktopSearch = memo(({ query, setQuery, onSubmit }) => (
   </form>
 ));
 DesktopSearch.displayName = "DesktopSearch";
-
-const TrendingList = memo(({ onClick }) => (
-  <div className="mt-3 flex flex-wrap gap-2">
-    <p className="w-full text-sm font-semibold text-gray-500">Trending:</p>
-    {trending.map((item, i) => (
-      <motion.button
-        key={item}
-        initial={{ opacity: 0, y: 5 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 * i }}
-        onClick={() => onClick(item)}
-        className="rounded-full bg-blue-50 px-3 py-1 text-sm text-blue-700 transition-all duration-200 hover:bg-blue-100 focus:outline-none"
-      >
-        {item}
-      </motion.button>
-    ))}
-  </div>
-));
-TrendingList.displayName = "TrendingList";
 
 const MobileMenu = memo(({ onClose }) => (
   <motion.aside
@@ -110,10 +77,8 @@ const MobileMenu = memo(({ onClose }) => (
 ));
 MobileMenu.displayName = "MobileMenu";
 
-// ---------- Navbar ----------
 const Navbar = () => {
   const [menuOpen, setMenuOpen] = useState(false);
-  const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [scrolled, setScrolled] = useState(false);
 
@@ -126,17 +91,10 @@ const Navbar = () => {
   const handleSubmit = useCallback(
     (e) => {
       e.preventDefault();
-      setSearchOpen(false);
-      handleSearchSubmit(query);
+      if (query.trim()) alert(`Searching for: ${query}`);
     },
     [query]
   );
-
-  const handleTrendingClick = useCallback((item) => {
-    setQuery(item);
-    setSearchOpen(false);
-    handleSearchSubmit(item);
-  }, []);
 
   return (
     <nav
@@ -150,10 +108,31 @@ const Navbar = () => {
           <img src={logo} alt="Mayabu logo" className="h-12 w-auto sm:h-10 md:h-12" />
         </a>
       </div>
-
       {/* Desktop search */}
       <DesktopSearch query={query} setQuery={setQuery} onSubmit={handleSubmit} />
-
+      {/* Mobile search bar */}
+      <form
+        onSubmit={handleSubmit}
+        className="flex-1 flex items-center sm:hidden ml-4"
+        role="search"
+      >
+        <div className="relative w-full max-w-xs">
+          <input
+            type="text"
+            placeholder="Search..."
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            className="w-full rounded-full border border-gray-200 bg-[#F6F7F9] py-2 pl-4 pr-10 text-base shadow-sm focus:border-blue-200 focus:ring-0"
+          />
+          <button
+            type="submit"
+            aria-label="Search"
+            className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-1 text-gray-500 hover:text-blue-600 transition-all duration-200"
+          >
+            <FiSearch size={20} />
+          </button>
+        </div>
+      </form>
       {/* Desktop icons */}
       <div className="hidden items-center gap-2 sm:flex">
         <Tippy content="Wishlist" animation="scale" placement="bottom">
@@ -165,7 +144,6 @@ const Navbar = () => {
             <span className="hidden md:inline">Wishlist</span>
           </a>
         </Tippy>
-
         <Tippy content="Updates" animation="scale" placement="bottom">
           <a
             href="/updates"
@@ -175,9 +153,7 @@ const Navbar = () => {
             <span className="hidden md:inline">Updates</span>
           </a>
         </Tippy>
-
         <div className="mx-3 hidden h-6 border-l border-gray-200 md:block" />
-
         <Tippy content="Profile" animation="scale" placement="bottom">
           <a
             href="/profile"
@@ -188,76 +164,19 @@ const Navbar = () => {
           </a>
         </Tippy>
       </div>
-
-      {/* Mobile buttons */}
-      <div className="flex items-center gap-4 sm:hidden">
-        {!searchOpen && (
-          <>
-            <button
-              aria-label="Open search"
-              onClick={() => {
-                setSearchOpen(true);
-                setMenuOpen(false);
-              }}
-              className="rounded-full p-2 text-gray-600 hover:bg-blue-50 hover:text-blue-600 transition-all duration-200"
-            >
-              <FiSearch size={24} />
-            </button>
-            <button
-              aria-label="Toggle menu"
-              onClick={() => setMenuOpen((p) => !p)}
-              className="rounded-full p-2 text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-all duration-200"
-            >
-              {menuOpen ? <FiX size={26} /> : <FiMenu size={26} />}
-            </button>
-          </>
-        )}
+      {/* Mobile menu button */}
+      <div className="flex items-center gap-4 sm:hidden ml-4">
+        <button
+          aria-label="Toggle menu"
+          onClick={() => setMenuOpen((p) => !p)}
+          className="rounded-full p-2 text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-all duration-200"
+        >
+          {menuOpen ? <FiX size={26} /> : <FiMenu size={26} />}
+        </button>
       </div>
-
-      {/* Mobile search */}
-      <AnimatePresence>
-        {searchOpen && (
-          <motion.div
-            key="mobile-search-ui"
-            initial={{ y: "-100%" }}
-            animate={{ y: 0 }}
-            exit={{ y: "-100%" }}
-            transition={{ type: "tween", duration: 0.3 }}
-            className="fixed left-0 top-0 z-50 w-full bg-white px-4 pb-4 pt-3 shadow sm:hidden"
-          >
-            <form onSubmit={handleSubmit} className="flex items-center">
-              <a href="/">
-                <img src={logo} alt="Mayabu" className="mr-3 h-12 w-auto" />
-              </a>
-              <div className="relative flex-1">
-                <input
-                  type="text"
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  autoFocus
-                  placeholder="Search products..."
-                  className="w-full rounded-full border-none bg-[#F6F7F9] py-3 pl-4 pr-10 text-base shadow-sm focus:border-none focus:ring-0"
-                />
-                <button
-                  onClick={() => {
-                    setSearchOpen(false);
-                    setQuery("");
-                  }}
-                  aria-label="Close search"
-                  className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1 text-gray-500 hover:bg-blue-50 hover:text-blue-600"
-                >
-                  <FiX size={20} />
-                </button>
-              </div>
-            </form>
-            <TrendingList onClick={handleTrendingClick} />
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       {/* Mobile menu */}
       <AnimatePresence>
-        {menuOpen && !searchOpen && <MobileMenu onClose={() => setMenuOpen(false)} />}
+        {menuOpen && <MobileMenu onClose={() => setMenuOpen(false)} />}
       </AnimatePresence>
     </nav>
   );
